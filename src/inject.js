@@ -1,6 +1,7 @@
 import './bypass.js';
 import { WEQ8Runtime } from 'weq8c';
 import { WEQ8UIElement } from 'weq8c/ui';
+import iconSvgText from '../icons/icon.svg';
 
 // Restore YouTube Music's polyfill environment immediately after imports complete
 if (typeof window.__keq_restore_bypass === 'function') {
@@ -553,43 +554,14 @@ function injectUI() {
   titleRow.style.alignItems = 'center';
   titleRow.style.gap = '8px';
 
-  const titleIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const titleIcon = new DOMParser().parseFromString(iconSvgText, 'image/svg+xml').documentElement;
   titleIcon.setAttribute('width', '28');
   titleIcon.setAttribute('height', '28');
-  titleIcon.setAttribute('viewBox', '0 0 512 512');
-  titleIcon.setAttribute('fill', 'none');
   titleIcon.style.flexShrink = '0';
   titleIcon.style.display = 'block';
-  // Background circle (transparent to blend with panel)
-  const iconBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  iconBg.setAttribute('cx', '256'); iconBg.setAttribute('cy', '256'); iconBg.setAttribute('r', '256'); iconBg.setAttribute('fill', 'transparent');
-  titleIcon.appendChild(iconBg);
-  // K left vertical bar
-  const kBar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  kBar.setAttribute('x', '116'); kBar.setAttribute('y', '78'); kBar.setAttribute('width', '33'); kBar.setAttribute('height', '355'); kBar.setAttribute('rx', '16.5'); kBar.setAttribute('fill', '#D9D9D9');
-  titleIcon.appendChild(kBar);
-  // K upper diagonal
-  const kDiagUp = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  kDiagUp.setAttribute('x', '236.984'); kDiagUp.setAttribute('y', '71.8662'); kDiagUp.setAttribute('width', '33'); kDiagUp.setAttribute('height', '250.329'); kDiagUp.setAttribute('rx', '16.5'); kDiagUp.setAttribute('transform', 'rotate(30 236.984 71.8662)'); kDiagUp.setAttribute('fill', '#D9D9D9');
-  titleIcon.appendChild(kDiagUp);
-  // K lower diagonal
-  const kDiagDown = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  kDiagDown.setAttribute('width', '33'); kDiagDown.setAttribute('height', '169.483'); kDiagDown.setAttribute('rx', '16.5'); kDiagDown.setAttribute('transform', 'matrix(0.866025 -0.5 -0.5 -0.866025 255.878 438.317)'); kDiagDown.setAttribute('fill', '#D9D9D9');
-  titleIcon.appendChild(kDiagDown);
-  // E/Q right vertical bar
-  const eqBar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  eqBar.setAttribute('x', '362'); eqBar.setAttribute('y', '78'); eqBar.setAttribute('width', '33'); eqBar.setAttribute('height', '355'); eqBar.setAttribute('rx', '16.5'); eqBar.setAttribute('fill', '#D9D9D9');
-  titleIcon.appendChild(eqBar);
-  // Middle vertical bar
-  const midBar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  midBar.setAttribute('x', '295'); midBar.setAttribute('y', '78'); midBar.setAttribute('width', '33'); midBar.setAttribute('height', '355'); midBar.setAttribute('rx', '16.5'); midBar.setAttribute('fill', '#D9D9D9');
-  titleIcon.appendChild(midBar);
-  // Knob circles
-  [[132, 256], [379, 320], [309, 192]].forEach(([cx, cy]) => {
-    const knob = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    knob.setAttribute('cx', cx); knob.setAttribute('cy', cy); knob.setAttribute('r', '32'); knob.setAttribute('fill', '#D9D9D9');
-    titleIcon.appendChild(knob);
-  });
+  // Make the background circle transparent so it blends with the panel
+  const iconBgCircle = titleIcon.querySelector('circle');
+  if (iconBgCircle) iconBgCircle.setAttribute('fill', 'transparent');
 
   const title = document.createElement('span');
   title.className = 'eq-title';

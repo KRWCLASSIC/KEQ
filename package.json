@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "esbuild src/inject.js --bundle --minify --outfile=dist/inject.bundle.js --platform=browser",
-    "watch": "esbuild src/inject.js --bundle --outfile=dist/inject.bundle.js --platform=browser --watch",
+    "build": "esbuild src/inject.js --bundle --minify --outfile=dist/inject.bundle.js --platform=browser --loader:.svg=text",
+    "watch": "esbuild src/inject.js --bundle --outfile=dist/inject.bundle.js --platform=browser --watch --loader:.svg=text",
     "release": "node release.js"
   },
   "keywords": [],
