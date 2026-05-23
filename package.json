@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "build": "esbuild src/inject.js --bundle --minify --outfile=dist/inject.bundle.js --platform=browser",
-    "watch": "esbuild src/inject.js --bundle --outfile=dist/inject.bundle.js --platform=browser --watch"
+    "watch": "esbuild src/inject.js --bundle --outfile=dist/inject.bundle.js --platform=browser --watch",
+    "release": "node release.js"
   },
   "keywords": [],
   "author": "krwclassic",
