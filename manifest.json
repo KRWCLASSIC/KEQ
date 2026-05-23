@@ -3,6 +3,12 @@
   "name": "KEQ - Youtube Music Equalizer",
   "version": "1.0.0",
   "description": "A beautiful 8-band parametric equalizer integrated directly into YouTube Music, powered by WEQ8C (WEQ8 Fork).",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "content_scripts": [
     {
       "matches": [
