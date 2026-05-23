@@ -2,7 +2,7 @@
 
 Open-source Chromium extension and 8-band studio parametric equalizer integrated directly into YouTube Music.
 
-Powered by my own fork of [weq8](https://github.com/teropa/weq8) called [WEQ8C](https://github.com/krwclassKRWCLASSIC/WEQ8C), which replicates look of Ableton Live's "EQ Eight" equalizer.
+Powered by my own fork of [weq8](https://github.com/teropa/weq8) called [WEQ8C](https://github.com/KRWCLASSIC/WEQ8C), which replicates look of Ableton Live's "EQ Eight" equalizer.
 
 ## License
 
