@@ -28,14 +28,14 @@ try {
     return originalUpdated.call(this, changedProperties);
   };
 
-  // Apply semi-translucent styling to match the main panel using WEQ8C's new native API
+  // Make the eq-widget host element fully invisible (no background, border, or shadow)
   WEQ8UIElement.addCustomStyles(`
     :host {
-      background: rgba(25, 25, 25, 0.4) !important;
-      backdrop-filter: blur(20px) saturate(140%);
-      -webkit-backdrop-filter: blur(20px) saturate(140%);
-      border: 1px solid rgba(255, 255, 255, 0.08) !important;
-      box-shadow: inset 0 0 20px rgba(0,0,0,0.2) !important;
+      background: transparent !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      border: none !important;
+      box-shadow: none !important;
     }
   `);
 
