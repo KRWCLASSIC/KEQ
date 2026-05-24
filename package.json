@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "esbuild src/inject.js --bundle --minify --outfile=dist/inject.bundle.js --platform=browser --loader:.svg=text",
-    "watch": "esbuild src/inject.js --bundle --outfile=dist/inject.bundle.js --platform=browser --watch --loader:.svg=text",
+    "dev": "esbuild src/inject.js --bundle --outfile=dist/inject.bundle.js --platform=browser --loader:.svg=text",
     "release": "node release.js"
   },
   "keywords": [],

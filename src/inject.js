@@ -554,14 +554,13 @@ function injectUI() {
   titleRow.style.alignItems = 'center';
   titleRow.style.gap = '8px';
 
-  const titleIcon = new DOMParser().parseFromString(iconSvgText, 'image/svg+xml').documentElement;
+  const svgNoBg = iconSvgText.replace(/(<circle\b[^>]*?)(\bfill="[^"]*")([^>]*?>)/g, '$1fill="transparent"$3');
+  const titleIcon = document.createElement('img');
+  titleIcon.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgNoBg);
   titleIcon.setAttribute('width', '28');
   titleIcon.setAttribute('height', '28');
   titleIcon.style.flexShrink = '0';
   titleIcon.style.display = 'block';
-  // Make the background circle transparent so it blends with the panel
-  const iconBgCircle = titleIcon.querySelector('circle');
-  if (iconBgCircle) iconBgCircle.setAttribute('fill', 'transparent');
 
   const title = document.createElement('span');
   title.className = 'eq-title';
