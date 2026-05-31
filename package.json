@@ -1,6 +1,6 @@
 {
   "name": "keq",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -13,7 +13,7 @@
   "license": "MIT",
   "type": "commonjs",
   "dependencies": {
-    "weq8c": "^0.2.4"
+    "weq8c": "^0.3.0"
   },
   "devDependencies": {
     "esbuild": "^0.28.0"

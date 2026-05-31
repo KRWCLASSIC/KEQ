@@ -1,4 +1,4 @@
-# KEQ - Youtube Music Equalizer
+# KEQ `1.0.1` - Youtube Music Equalizer
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-yellow?logo=paypal)](https://paypal.me/krwclassic)
 

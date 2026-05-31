@@ -2,6 +2,7 @@ import './bypass.js';
 import { WEQ8Runtime } from 'weq8c';
 import { WEQ8UIElement } from 'weq8c/ui';
 import iconSvgText from '../icons/icon.svg';
+import { version } from '../manifest.json';
 
 // Restore YouTube Music's polyfill environment immediately after imports complete
 if (typeof window.__keq_restore_bypass === 'function') {
@@ -37,6 +38,11 @@ try {
       -webkit-backdrop-filter: none !important;
       border: none !important;
       box-shadow: none !important;
+    }
+
+    .visualisation {
+      border-radius: 16px;
+      overflow: hidden;
     }
   `);
 
@@ -243,6 +249,151 @@ const PANEL_STYLES = `
   .eq-body {
     width: 100%;
     overflow: hidden;
+    position: relative;
+  }
+
+  /* Settings overlay styling */
+  .eq-settings-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(18, 18, 18, 0.95);
+    backdrop-filter: blur(15px) saturate(140%);
+    -webkit-backdrop-filter: blur(15px) saturate(140%);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85);
+    z-index: 10;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+    padding: 16px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .eq-settings-overlay.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+  }
+
+  .eq-settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+  }
+
+  .eq-settings-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffcc00;
+  }
+
+  .eq-settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 6px 0;
+  }
+
+  .eq-settings-label {
+    font-size: 11px;
+    color: #ddd;
+    font-weight: 500;
+    width: 120px;
+    flex-shrink: 0;
+  }
+
+  .eq-settings-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-grow: 1;
+    justify-content: flex-end;
+  }
+
+  .eq-settings-slider {
+    flex-grow: 1;
+    max-width: 180px;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.15);
+    outline: none;
+    cursor: pointer;
+  }
+
+  .eq-settings-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ffcc00;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(255, 204, 0, 0.5);
+    transition: transform 0.1s;
+  }
+
+  .eq-settings-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+
+  .eq-settings-slider:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .eq-settings-slider:disabled::-webkit-slider-thumb {
+    background: #888;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  .eq-settings-value {
+    font-size: 11px;
+    font-family: monospace;
+    color: #bbb;
+    width: 45px;
+    text-align: right;
+  }
+
+  .eq-settings-select {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #eee;
+    padding: 4px 24px 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 10px;
+    width: 160px;
+  }
+
+  .eq-settings-select:focus {
+    border-color: #ffcc00;
+  }
+
+  .eq-settings-select option {
+    background: #181818;
+    color: #eee;
   }
 `;
 
@@ -293,6 +444,14 @@ function saveSettings(spec) {
   }
 }
 
+function saveSaturationSettings() {
+  if (weq8) {
+    localStorage.setItem('ytm_eq_output_gain', weq8.outputGain.toString());
+    localStorage.setItem('ytm_eq_saturation_mode', weq8.saturationMode);
+    localStorage.setItem('ytm_eq_saturation_threshold', weq8.saturationThreshold.toString());
+  }
+}
+
 // Load configuration from localStorage
 function loadSettings() {
   try {
@@ -305,6 +464,16 @@ function loadSettings() {
 
     if (savedPreset !== null) {
       currentPreset = savedPreset;
+    }
+
+    if (weq8) {
+      const savedOutputGain = localStorage.getItem('ytm_eq_output_gain');
+      if (savedOutputGain !== null) {
+        weq8.outputGain = parseFloat(savedOutputGain);
+      }
+      const savedSatMode = localStorage.getItem('ytm_eq_saturation_mode') || 'none';
+      const savedSatThreshold = localStorage.getItem('ytm_eq_saturation_threshold') || '1.0';
+      weq8.setSaturationMode(savedSatMode, { threshold: parseFloat(savedSatThreshold) });
     }
 
     isApplyingPreset = true;
@@ -562,9 +731,34 @@ function injectUI() {
   titleIcon.style.flexShrink = '0';
   titleIcon.style.display = 'block';
 
+  const titleTextGroup = document.createElement('div');
+  titleTextGroup.style.display = 'flex';
+  titleTextGroup.style.flexDirection = 'column';
+  titleTextGroup.style.lineHeight = '1.2';
+
   const title = document.createElement('span');
   title.className = 'eq-title';
   title.textContent = 'KEQ';
+
+  const versionLabel = document.createElement('span');
+  versionLabel.textContent = `v${version}`;
+  versionLabel.style.fontSize = '10px';
+  versionLabel.style.color = 'rgba(255,255,255,0.35)';
+  versionLabel.style.letterSpacing = '0.04em';
+  versionLabel.style.fontWeight = '500';
+
+  titleTextGroup.appendChild(title);
+  titleTextGroup.appendChild(versionLabel);
+
+  const badgesContainer = document.createElement('div');
+  badgesContainer.style.display = 'flex';
+  badgesContainer.style.flexDirection = 'column';
+  badgesContainer.style.gap = '4px';
+  badgesContainer.style.alignItems = 'flex-start';
+
+  const githubRow = document.createElement('div');
+  githubRow.style.display = 'flex';
+  githubRow.style.gap = '6px';
 
   const githubBadge = document.createElement('a');
   githubBadge.href = 'https://github.com/KRWCLASSIC/KEQ';
@@ -575,6 +769,18 @@ function injectUI() {
   githubImg.style.display = 'block';
   githubBadge.appendChild(githubImg);
 
+  const weq8cBadge = document.createElement('a');
+  weq8cBadge.href = 'https://github.com/KRWCLASSIC/WEQ8C';
+  weq8cBadge.target = '_blank';
+  const weq8cImg = document.createElement('img');
+  weq8cImg.src = 'https://img.shields.io/badge/GitHub-WEQ8C-blue?logo=github';
+  weq8cImg.style.height = '16px';
+  weq8cImg.style.display = 'block';
+  weq8cBadge.appendChild(weq8cImg);
+
+  githubRow.appendChild(githubBadge);
+  githubRow.appendChild(weq8cBadge);
+
   const donateBadge = document.createElement('a');
   donateBadge.href = 'https://paypal.me/krwclassic';
   donateBadge.target = '_blank';
@@ -584,10 +790,12 @@ function injectUI() {
   donateImg.style.display = 'block';
   donateBadge.appendChild(donateImg);
 
+  badgesContainer.appendChild(githubRow);
+  badgesContainer.appendChild(donateBadge);
+
   titleRow.appendChild(titleIcon);
-  titleRow.appendChild(title);
-  titleRow.appendChild(githubBadge);
-  titleRow.appendChild(donateBadge);
+  titleRow.appendChild(titleTextGroup);
+  titleRow.appendChild(badgesContainer);
 
   titleContainer.appendChild(titleRow);
 
@@ -622,6 +830,11 @@ function injectUI() {
   resetBtn.className = 'eq-btn';
   resetBtn.textContent = 'Reset';
 
+  const settingsBtn = document.createElement('button');
+  settingsBtn.id = 'eq-settings';
+  settingsBtn.className = 'eq-btn';
+  settingsBtn.textContent = 'Settings';
+
   const label = document.createElement('label');
   label.className = 'eq-switch';
   label.title = 'Toggle Equalizer';
@@ -645,6 +858,7 @@ function injectUI() {
 
   controls.appendChild(select);
   controls.appendChild(resetBtn);
+  controls.appendChild(settingsBtn);
   controls.appendChild(label);
   controls.appendChild(closeBtn);
 
@@ -657,6 +871,223 @@ function injectUI() {
   const widget = document.createElement('weq8-ui');
   widget.id = 'eq-widget';
   body.appendChild(widget);
+
+  // Build the Settings Overlay
+  const settingsOverlay = document.createElement('div');
+  settingsOverlay.id = 'eq-settings-overlay';
+  settingsOverlay.className = 'eq-settings-overlay';
+
+  const settingsHeader = document.createElement('div');
+  settingsHeader.className = 'eq-settings-header';
+
+  const settingsTitle = document.createElement('span');
+  settingsTitle.className = 'eq-settings-title';
+  settingsTitle.textContent = 'Advanced Settings';
+
+  const settingsClose = document.createElement('button');
+  settingsClose.className = 'eq-close-btn';
+  settingsClose.textContent = '×';
+  settingsClose.title = 'Back to Equalizer';
+
+  settingsHeader.appendChild(settingsTitle);
+  settingsHeader.appendChild(settingsClose);
+  settingsOverlay.appendChild(settingsHeader);
+
+  // Input Gain Row (Read Only)
+  const inputRow = document.createElement('div');
+  inputRow.className = 'eq-settings-row';
+  const inputLabel = document.createElement('span');
+  inputLabel.className = 'eq-settings-label';
+  inputLabel.textContent = 'Input Gain';
+  const inputControl = document.createElement('div');
+  inputControl.className = 'eq-settings-control';
+  const inputSlider = document.createElement('input');
+  inputSlider.type = 'range';
+  inputSlider.className = 'eq-settings-slider';
+  inputSlider.min = '0';
+  inputSlider.max = '2';
+  inputSlider.step = '0.01';
+  inputSlider.disabled = true;
+  const inputValue = document.createElement('span');
+  inputValue.className = 'eq-settings-value';
+  inputValue.textContent = '1.00';
+  inputControl.appendChild(inputSlider);
+  inputControl.appendChild(inputValue);
+  inputRow.appendChild(inputLabel);
+  inputRow.appendChild(inputControl);
+  settingsOverlay.appendChild(inputRow);
+
+  // Output Gain Row (Read/Write)
+  const outputRow = document.createElement('div');
+  outputRow.className = 'eq-settings-row';
+  const outputLabel = document.createElement('span');
+  outputLabel.className = 'eq-settings-label';
+  outputLabel.textContent = 'Output Gain';
+  const outputControl = document.createElement('div');
+  outputControl.className = 'eq-settings-control';
+  const outputSlider = document.createElement('input');
+  outputSlider.type = 'range';
+  outputSlider.className = 'eq-settings-slider';
+  outputSlider.min = '0';
+  outputSlider.max = '2';
+  outputSlider.step = '0.01';
+  const outputValue = document.createElement('span');
+  outputValue.className = 'eq-settings-value';
+  outputValue.textContent = '1.00';
+  outputControl.appendChild(outputSlider);
+  outputControl.appendChild(outputValue);
+  outputRow.appendChild(outputLabel);
+  outputRow.appendChild(outputControl);
+  settingsOverlay.appendChild(outputRow);
+
+  // Saturation Mode Row
+  const modeRow = document.createElement('div');
+  modeRow.className = 'eq-settings-row';
+  const modeLabel = document.createElement('span');
+  modeLabel.className = 'eq-settings-label';
+  modeLabel.textContent = 'Clipping Mode';
+  const modeControl = document.createElement('div');
+  modeControl.className = 'eq-settings-control';
+  const modeSelect = document.createElement('select');
+  modeSelect.className = 'eq-settings-select';
+  const modes = [
+    { value: 'none', label: 'None (Bypass)' },
+    { value: 'soft', label: 'Soft Clipping' },
+    { value: 'hard', label: 'Hard Clipping' },
+    { value: 'foldback', label: 'Foldback' },
+    { value: 'limit', label: 'Limiter' }
+  ];
+  modes.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.value;
+    opt.textContent = m.label;
+    modeSelect.appendChild(opt);
+  });
+  modeControl.appendChild(modeSelect);
+  modeRow.appendChild(modeLabel);
+  modeRow.appendChild(modeControl);
+  settingsOverlay.appendChild(modeRow);
+
+  // Threshold Row
+  const threshRow = document.createElement('div');
+  threshRow.className = 'eq-settings-row';
+  const threshLabel = document.createElement('span');
+  threshLabel.className = 'eq-settings-label';
+  threshLabel.textContent = 'Threshold';
+  const threshControl = document.createElement('div');
+  threshControl.className = 'eq-settings-control';
+  const threshSlider = document.createElement('input');
+  threshSlider.type = 'range';
+  threshSlider.className = 'eq-settings-slider';
+  threshSlider.min = '0.1';
+  threshSlider.max = '1.0';
+  threshSlider.step = '0.01';
+  const threshValue = document.createElement('span');
+  threshValue.className = 'eq-settings-value';
+  threshValue.textContent = '1.00';
+  threshControl.appendChild(threshSlider);
+  threshControl.appendChild(threshValue);
+  threshRow.appendChild(threshLabel);
+  threshRow.appendChild(threshControl);
+  settingsOverlay.appendChild(threshRow);
+
+  body.appendChild(settingsOverlay);
+
+  const updateSettingsUI = () => {
+    if (!weq8) return;
+    
+    // Read input gain from youtube's volume slider
+    const volSlider = document.getElementById('volume-slider');
+    let volVal = 100;
+    if (volSlider) {
+      const attrVal = volSlider.getAttribute('value');
+      const propVal = volSlider.value;
+      volVal = parseFloat(attrVal !== null ? attrVal : (propVal !== undefined ? propVal : 100));
+    }
+    const inGain = volVal / 100;
+    inputSlider.value = inGain;
+    inputValue.textContent = inGain.toFixed(2);
+
+    const outGain = weq8.outputGain;
+    outputSlider.value = outGain;
+    outputValue.textContent = outGain.toFixed(2);
+
+    const satMode = weq8.saturationMode;
+    modeSelect.value = satMode;
+
+    const satThresh = weq8.saturationThreshold;
+    threshSlider.value = satThresh;
+    threshValue.textContent = satThresh.toFixed(2);
+
+    if (satMode === 'none') {
+      threshSlider.disabled = true;
+      threshValue.style.opacity = '0.4';
+    } else {
+      threshSlider.disabled = false;
+      threshValue.style.opacity = '1';
+    }
+  };
+
+  // Connect reactive volume listeners for live input gain update
+  const volSlider = document.getElementById('volume-slider');
+  if (volSlider) {
+    const handleVolChange = () => {
+      if (settingsOverlay.classList.contains('show')) {
+        updateSettingsUI();
+      }
+    };
+    volSlider.addEventListener('value-change', handleVolChange);
+    volSlider.addEventListener('change', handleVolChange);
+    volSlider.addEventListener('input', handleVolChange);
+    
+    const volObserver = new MutationObserver(handleVolChange);
+    volObserver.observe(volSlider, { attributes: true, attributeFilter: ['value'] });
+  }
+
+  settingsBtn.addEventListener('click', () => {
+    if (settingsOverlay.classList.contains('show')) {
+      settingsOverlay.classList.remove('show');
+    } else {
+      const video = document.querySelector('video');
+      if (video) {
+        initEqualizer(video);
+      }
+      updateSettingsUI();
+      settingsOverlay.classList.add('show');
+    }
+  });
+
+  settingsClose.addEventListener('click', () => {
+    settingsOverlay.classList.remove('show');
+  });
+
+  outputSlider.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    outputValue.textContent = val.toFixed(2);
+    if (weq8) {
+      weq8.outputGain = val;
+      saveSaturationSettings();
+    }
+  });
+
+  modeSelect.addEventListener('change', (e) => {
+    const mode = e.target.value;
+    const threshVal = parseFloat(threshSlider.value);
+    if (weq8) {
+      weq8.setSaturationMode(mode, { threshold: threshVal });
+      saveSaturationSettings();
+      updateSettingsUI();
+    }
+  });
+
+  threshSlider.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    threshValue.textContent = val.toFixed(2);
+    if (weq8) {
+      weq8.setSaturationMode(weq8.saturationMode, { threshold: val });
+      saveSaturationSettings();
+    }
+  });
 
   panel.appendChild(header);
   panel.appendChild(body);

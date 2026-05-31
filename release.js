@@ -111,6 +111,12 @@ async function main() {
   writeJSON(MANIFEST, manifest);
   console.log(green('  ✓ manifest.json updated'));
 
+  const pkgPath = path.join(ROOT, 'package.json');
+  const pkg = readJSON(pkgPath);
+  pkg.version = newVersion;
+  writeJSON(pkgPath, pkg);
+  console.log(green('  ✓ package.json updated'));
+
   // ── Step 2: Build ────────────────────────────────────────────────────────
   console.log(`\n${bold('[2/3]')} Running build...`);
   try {
