@@ -38,12 +38,14 @@ try {
       return adapterDefine.call(window.customElements, name, constructor);
     };
 
-    // 5. Define a restore function to bring back YouTube Music's polyfills right after imports complete
+    // 5. Define a restore function to bring back the adapter environment right after imports complete.
+    //    This is called on BOTH YouTube Music and regular YouTube — without restoring, the patched
+    //    HTMLElement and customElements.define stay active for the whole page, breaking other elements.
     window.__keq_restore_bypass = function () {
       window.HTMLElement = adapterHTMLElement;
       window.customElements.define = adapterDefine;
       delete window.__keq_restore_bypass;
-      console.log('%c[KEQ]%c Restored YouTube Music\'s adapter environment.', 'background: #ff0055; color: white; padding: 2px 6px; border-radius: 4px;', 'color: #888;');
+      console.log('%c[KEQ]%c Restored adapter environment.', 'background: #ff0055; color: white; padding: 2px 6px; border-radius: 4px;', 'color: #888;');
     };
   } else {
     console.warn('[KEQ] Could not retrieve native browser constructors. Adapter bypass disabled.');
