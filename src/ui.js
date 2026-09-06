@@ -3,7 +3,7 @@ import { version } from '../manifest.json';
 import * as state from './state.js';
 import { PANEL_STYLES } from './styles.js';
 import { saveUserPreset, deleteUserPreset } from './settings.js';
-import { initEqualizer, setEqEnabled, applyPreset, resetToFlat } from './equalizer.js';
+import { ensureAudioEngine, connectVideo, initEqualizer, setEqEnabled, applyPreset, resetToFlat } from './equalizer.js';
 import { log } from './logger.js';
 
 // Update the controls in our custom panel header
@@ -37,16 +37,11 @@ export function updateUIControls() {
   }
 
   // Update Toolbar Icon Colors
-  const eqBtn = document.getElementById('ytm-eq-btn');
-  const expandEqBtn = document.getElementById('ytm-expand-eq-btn');
   const activeColor = '#bebe5b';
-
-  if (eqBtn) {
-    eqBtn.style.color = state.isEqEnabled ? activeColor : '';
-  }
-  if (expandEqBtn) {
-    expandEqBtn.style.color = state.isEqEnabled ? activeColor : '';
-  }
+  const buttons = document.querySelectorAll('#ytm-eq-btn, #ytm-expand-eq-btn');
+  buttons.forEach(btn => {
+    btn.style.color = state.isEqEnabled ? activeColor : '';
+  });
 }
 
 // Inject HTML UI into the DOM
@@ -159,7 +154,18 @@ export function injectUI() {
   const selectCurrent = document.createElement('div');
   selectCurrent.id = 'eq-preset-current';
   selectCurrent.className = 'eq-select-current';
-  selectCurrent.textContent = 'Flat';
+  let initialLabel = state.currentPreset;
+  if (state.currentPreset !== 'custom' && !state.userPresets[state.currentPreset]) {
+    const builtins = {
+      'flat': 'Flat', 'bass-boost': 'Bass Boost', 'treble-boost': 'Treble Boost',
+      'vocal-boost': 'Vocal Boost', 'dance': 'Electronic', 'rock': 'Rock',
+      'pop': 'Pop', 'classical': 'Classical'
+    };
+    initialLabel = builtins[state.currentPreset] || state.currentPreset;
+  } else if (state.currentPreset === 'custom') {
+    initialLabel = 'Custom';
+  }
+  selectCurrent.textContent = initialLabel || 'Flat';
   selectCurrent.title = 'Equalizer Presets';
 
   const selectMenuWrap = document.createElement('div');
@@ -374,7 +380,7 @@ export function injectUI() {
   const input = document.createElement('input');
   input.type = 'checkbox';
   input.id = 'eq-power';
-  input.checked = true;
+  input.checked = state.isEqEnabled;
 
   const slider = document.createElement('span');
   slider.className = 'eq-slider';
@@ -402,6 +408,9 @@ export function injectUI() {
 
   const widget = document.createElement('weq8-ui');
   widget.id = 'eq-widget';
+  if (state.weq8) {
+    widget.runtime = state.weq8;
+  }
   body.appendChild(widget);
 
   // Build the Settings Overlay
@@ -572,9 +581,9 @@ export function injectUI() {
     if (settingsOverlay.classList.contains('show')) {
       settingsOverlay.classList.remove('show');
     } else {
-      const video = document.querySelector('video');
-      if (video) {
-        initEqualizer(video);
+      detectAndConnectVideos();
+      if (state.audioCtx && state.audioCtx.state === 'suspended') {
+        state.audioCtx.resume().catch(() => {});
       }
       updateSettingsUI();
       settingsOverlay.classList.add('show');
@@ -704,14 +713,16 @@ export function injectUI() {
       expandEqButton.classList.add('active');
 
       // Ensure the AudioContext and EQ are connected when opening the panel
-      const video = document.querySelector('video');
-      if (video) {
-        initEqualizer(video);
+      detectAndConnectVideos();
+
+      const widget = document.getElementById('eq-widget');
+      if (widget && state.weq8 && widget.runtime !== state.weq8) {
+        widget.runtime = state.weq8;
       }
 
       // Resume context (browsers block initial context sometimes)
       if (state.audioCtx && state.audioCtx.state === 'suspended') {
-        state.audioCtx.resume();
+        state.audioCtx.resume().catch(() => {});
       }
 
       // Force visualizer redraw as the panel slides open and takes physical dimensions
@@ -748,6 +759,9 @@ export function injectUI() {
 
   // Attempt to inject the button in the bottom right player bar controls
   injectButtonLoop(eqButton, expandEqButton);
+
+  // Synchronize controls with loaded state
+  updateUIControls();
 }
 
 // Look for right-controls-buttons and inject our button there
@@ -778,11 +792,8 @@ export function injectButtonLoop(button, expandButton) {
       log.info('Equalizer buttons successfully injected into Player Bar.');
 
       // Once injected, look for active video elements immediately to initialize backend hooks silently
-      const video = document.querySelector('video');
-      if (video) {
-        // Run silent init (without showing panel)
-        initEqualizer(video);
-      }
+      detectAndConnectVideos();
+      updateUIControls();
       return true;
     }
     return false;
@@ -797,18 +808,75 @@ export function injectButtonLoop(button, expandButton) {
   }
 }
 
-// Watch for DOM mutations to catch video elements if they are hot-swapped
-export function setupDOMWatcher() {
-  const observer = new MutationObserver((mutations) => {
-    const video = document.querySelector('video');
-    if (video && !video.__weq8_connected) {
-      initEqualizer(video);
-    }
+// Find and connect all relevant active video elements to the audio graph
+export function detectAndConnectVideos() {
+  ensureAudioEngine();
+
+  // 1. YouTube main player video
+  const ytVideo = document.querySelector('.html5-main-video') ||
+                  document.querySelector('#movie_player video') ||
+                  document.querySelector('.html5-video-player video');
+  if (ytVideo) {
+    connectVideo(ytVideo);
+  }
+
+  // 2. YouTube Music player bar video
+  const ytmVideo = document.querySelector('ytmusic-player-bar video') ||
+                   document.querySelector('#player video') ||
+                   document.querySelector('ytmusic-player video');
+  if (ytmVideo && ytmVideo !== ytVideo) {
+    connectVideo(ytmVideo);
+  }
+
+  // 3. Fallback: connect all other video elements in the DOM
+  const allVideos = document.querySelectorAll('video');
+  allVideos.forEach(v => {
+    connectVideo(v);
   });
 
-  observer.observe(document.body, {
+  // Ensure AudioContext is running if any video is actively playing
+  if (state.audioCtx && state.audioCtx.state === 'suspended') {
+    const isAnyPlaying = Array.from(allVideos).some(v => !v.paused && v.currentTime > 0);
+    if (isAnyPlaying) {
+      state.audioCtx.resume().catch(() => {});
+    }
+  }
+}
+
+// Watch for DOM mutations to catch video elements if they are hot-swapped
+export function setupDOMWatcher() {
+  detectAndConnectVideos();
+
+  const observer = new MutationObserver(() => {
+    detectAndConnectVideos();
+  });
+
+  observer.observe(document.body || document.documentElement, {
     childList: true,
     subtree: true
+  });
+
+  // SPA navigation events for YouTube and YouTube Music
+  const spaEvents = [
+    'yt-navigate-finish',
+    'yt-page-data-updated',
+    'ytmusic-navigate-finish',
+    'ytmusic-player-bar-attached',
+    'ytmusic-player-ready',
+    'popstate'
+  ];
+
+  spaEvents.forEach(evtName => {
+    window.addEventListener(evtName, () => {
+      setTimeout(detectAndConnectVideos, 50);
+      setTimeout(detectAndConnectVideos, 300);
+      setTimeout(detectAndConnectVideos, 1000);
+    }, { passive: true });
+    document.addEventListener(evtName, () => {
+      setTimeout(detectAndConnectVideos, 50);
+      setTimeout(detectAndConnectVideos, 300);
+      setTimeout(detectAndConnectVideos, 1000);
+    }, { passive: true });
   });
 }
 
@@ -917,18 +985,22 @@ export function injectYouTubeButton() {
       panel.classList.add('show');
 
       // Connect audio graph on first open
-      const video = document.querySelector('video');
-      if (video) initEqualizer(video);
+      detectAndConnectVideos();
+
+      const widget = document.getElementById('eq-widget');
+      if (widget && state.weq8 && widget.runtime !== state.weq8) {
+        widget.runtime = state.weq8;
+      }
 
       if (state.audioCtx && state.audioCtx.state === 'suspended') {
-        state.audioCtx.resume();
+        state.audioCtx.resume().catch(() => {});
       }
 
       // Force visualizer redraw as the panel slides open
       const forceRedraw = () => {
         if (state.weq8 && state.weq8.emitter) {
           const wasApplying = state.isApplyingPreset;
-          state.setIsApplyingPreset(true);
+          state.setIsApplyingPreset(true); // Prevent overriding preset state
           state.weq8.emitter.emit('filtersChanged', state.weq8.spec);
           state.setIsApplyingPreset(wasApplying);
         }
@@ -937,10 +1009,7 @@ export function injectYouTubeButton() {
       setTimeout(forceRedraw, 150);
       setTimeout(forceRedraw, 350);
     }
-
   });
-
-
 
   // Recalculate panel position when layout changes (fullscreen, resize, theater mode)
   const repositionPanel = () => {
@@ -984,8 +1053,8 @@ export function injectYouTubeButton() {
     log.info('Equalizer button injected into YouTube player controls.');
 
     // Initialize audio graph silently on first injection (after button is in DOM so it can be colored)
-    const video = document.querySelector('video');
-    if (video) initEqualizer(video);
+    detectAndConnectVideos();
+    updateUIControls();
 
     return true;
   };
@@ -1011,7 +1080,7 @@ export function injectYouTubeButton() {
           tryInject();
         }
       });
-      bodyObserver.observe(document.body, { childList: true, subtree: true });
+      bodyObserver.observe(document.body || document.documentElement, { childList: true, subtree: true });
     }
   };
 
@@ -1020,4 +1089,14 @@ export function injectYouTubeButton() {
   } else {
     startObserver(); // Still watch for future rebuilds even if first inject succeeded
   }
+
+  // Also try re-injecting and detecting videos on YouTube navigation events
+  ['yt-navigate-finish', 'yt-page-data-updated'].forEach(evt => {
+    window.addEventListener(evt, () => {
+      setTimeout(tryInject, 100);
+      setTimeout(tryInject, 500);
+      setTimeout(detectAndConnectVideos, 100);
+      setTimeout(detectAndConnectVideos, 500);
+    }, { passive: true });
+  });
 }

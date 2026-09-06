@@ -1,7 +1,8 @@
 import './bypass.js';
 import { WEQ8UIElement } from 'weq8c/ui';
 import { log } from './logger.js';
-import { injectUI, setupDOMWatcher, injectYouTubeButton } from './ui.js';
+import { injectUI, setupDOMWatcher, injectYouTubeButton, detectAndConnectVideos, updateUIControls } from './ui.js';
+import { ensureAudioEngine, setupAudioResumeListeners } from './equalizer.js';
 
 const isYTM = location.hostname === 'music.youtube.com';
 
@@ -51,18 +52,28 @@ try {
 
 // Entry Point
 function main() {
-  log.info('YouTube Music Parametric Equalizer Extender initialized.');
+  log.info('KEQ Equalizer Extender initialized.');
+
+  // Eagerly initialize AudioEngine & user gesture listeners
+  ensureAudioEngine();
+  setupAudioResumeListeners();
 
   // Inject UI elements (panel is the same on both sites)
   injectUI();
 
-  // Watch for video hot-swaps via MutationObserver on both sites
+  // Watch for video hot-swaps & SPA navigation on both sites
   setupDOMWatcher();
 
   if (!isYTM) {
     // YouTube (standard): inject into the player controls
     injectYouTubeButton();
   }
+
+  // Scan and connect any videos currently present
+  detectAndConnectVideos();
+
+  // Ensure all UI controls and button colors are synced to loaded state
+  updateUIControls();
 }
 
 // Wait for DOM to load fully before running

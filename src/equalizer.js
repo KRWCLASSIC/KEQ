@@ -5,35 +5,61 @@ import { log } from './logger.js';
 import { loadSettings, saveSettings } from './settings.js';
 import { updateUIControls } from './ui.js';
 
-// Initialize Web Audio Graph and WEQ8
-export function initEqualizer(video) {
-  if (video.__weq8_connected) {
-    // If already connected, just ensure context is active
+let isEngineInitialized = false;
+let stereoGain = null;
+let monoPathGain = null;
+let resumeListenersAttached = false;
+const connectedMediaElements = new WeakSet();
+
+// Setup global user gesture listeners to wake up AudioContext on any interaction
+export function setupAudioResumeListeners() {
+  if (resumeListenersAttached) return;
+  resumeListenersAttached = true;
+
+  const tryResume = () => {
     if (state.audioCtx && state.audioCtx.state === 'suspended') {
-      state.audioCtx.resume();
+      state.audioCtx.resume().catch(() => {});
     }
-    return;
+  };
+
+  // Interactions that satisfy browser autoplay policies
+  const userEvents = ['click', 'keydown', 'pointerdown', 'touchstart', 'focus'];
+  userEvents.forEach(evt => {
+    window.addEventListener(evt, tryResume, { capture: true, passive: true });
+    document.addEventListener(evt, tryResume, { capture: true, passive: true });
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      tryResume();
+    }
+  });
+
+  window.addEventListener('focus', tryResume, { passive: true });
+}
+
+// Ensure the singleton Web Audio API graph and WEQ8 runtime are created once
+export function ensureAudioEngine() {
+  if (isEngineInitialized && state.audioCtx && state.weq8) {
+    if (state.audioCtx.state === 'suspended') {
+      state.audioCtx.resume().catch(() => {});
+    }
+    return state.weq8;
   }
 
-  log.info('Connecting YouTube Music player to Parametric Equalizer...');
-  video.__weq8_connected = true;
-  state.setActiveVideo(video);
+  log.info('Initializing singleton Web Audio Engine and Parametric Equalizer graph...');
 
   try {
     if (!state.audioCtx) {
       state.setAudioCtx(new (window.AudioContext || window.webkitAudioContext)());
     }
 
-    // Create runtime
     state.setWeq8(new WEQ8Runtime(state.audioCtx));
 
-    // Create source from the video element
-    state.setSourceNode(state.audioCtx.createMediaElementSource(video));
-
     // Build Mono / Stereo Crossfade Graph
-    const stereoGain = state.audioCtx.createGain();
-    const monoPathGain = state.audioCtx.createGain();
-    
+    stereoGain = state.audioCtx.createGain();
+    monoPathGain = state.audioCtx.createGain();
+
     const splitter = state.audioCtx.createChannelSplitter(2);
     const merger = state.audioCtx.createChannelMerger(2);
     const sumGain = state.audioCtx.createGain();
@@ -48,44 +74,40 @@ export function initEqualizer(video) {
     stereoGain.gain.value = state.isMonoEnabled ? 0 : 1;
     monoPathGain.gain.value = state.isMonoEnabled ? 1 : 0;
 
-    // Route: Media element -> Equalizer -> (Stereo || Mono) -> Speakers
-    state.sourceNode.connect(state.weq8.input);
-    
+    // Route: Media element source(s) -> WEQ8 input -> (Stereo || Mono) -> Destination
     state.weq8.connect(stereoGain);
     state.weq8.connect(monoPathGain);
-    
+
     stereoGain.connect(state.audioCtx.destination);
     merger.connect(state.audioCtx.destination);
 
-    // Expose a function to toggle mono cleanly
+    // Expose mono toggle function
     window.__setMonoEnabled = (enabled) => {
-      // Use linear ramp to precisely hit 0 and prevent phase cancellation/comb filtering leaks
+      if (!state.audioCtx || !stereoGain || !monoPathGain) return;
       const now = state.audioCtx.currentTime;
-      
+
       stereoGain.gain.cancelScheduledValues(now);
       stereoGain.gain.setValueAtTime(stereoGain.gain.value, now);
       stereoGain.gain.linearRampToValueAtTime(enabled ? 0 : 1, now + 0.05);
-      
+
       monoPathGain.gain.cancelScheduledValues(now);
       monoPathGain.gain.setValueAtTime(monoPathGain.gain.value, now);
       monoPathGain.gain.linearRampToValueAtTime(enabled ? 1 : 0, now + 0.05);
     };
 
-    // Load persisted settings FIRST so the runtime has the correct spec
-    // before the UI widget reads it.
+    // Load persisted settings FIRST so runtime has correct spec
     loadSettings();
 
-    // Inject the runtime into our custom UI component
+    // Attach to UI widget if present
     const widget = document.getElementById('eq-widget');
     if (widget) {
       widget.runtime = state.weq8;
     }
 
-
-    // Listen to changes to save them
+    // Save on filtersChanged
     state.weq8.on('filtersChanged', (spec) => {
       const currentSpecJSON = JSON.stringify(spec);
-      if (currentSpecJSON === state.lastKnownSpecJSON) return; // Ignore identical state emits
+      if (currentSpecJSON === state.lastKnownSpecJSON) return;
       state.setLastKnownSpecJSON(currentSpecJSON);
 
       if (!state.isApplyingPreset) {
@@ -95,14 +117,66 @@ export function initEqualizer(video) {
       saveSettings(spec);
     });
 
-    // Automatically try to resume context on video play
-    video.addEventListener('play', () => {
-      if (state.audioCtx && state.audioCtx.state === 'suspended') {
-        state.audioCtx.resume();
-      }
-    });
+    setupAudioResumeListeners();
+    isEngineInitialized = true;
+
+    return state.weq8;
   } catch (error) {
-    log.error('Failed to initialize AudioContext / Equalizer', error);
+    log.error('Failed to initialize AudioContext / Equalizer engine', error);
+  }
+}
+
+// Connect a video / media element to the equalizer
+export function connectVideo(video) {
+  if (!video || !(video instanceof HTMLMediaElement)) return;
+
+  if (connectedMediaElements.has(video) || video.__weq8_connected) {
+    state.setActiveVideo(video);
+    if (state.audioCtx && state.audioCtx.state === 'suspended') {
+      state.audioCtx.resume().catch(() => {});
+    }
+    return;
+  }
+
+  try {
+    ensureAudioEngine();
+
+    log.info('Connecting media element to Parametric Equalizer...');
+    video.__weq8_connected = true;
+    connectedMediaElements.add(video);
+    state.setActiveVideo(video);
+
+    const source = state.audioCtx.createMediaElementSource(video);
+    source.connect(state.weq8.input);
+    state.setSourceNode(source);
+
+    const resumeContextOnActivity = () => {
+      state.setActiveVideo(video);
+      if (state.audioCtx && state.audioCtx.state === 'suspended') {
+        state.audioCtx.resume().catch(() => {});
+      }
+    };
+
+    ['play', 'playing', 'timeupdate', 'volumechange', 'canplay'].forEach(evt => {
+      video.addEventListener(evt, resumeContextOnActivity, { passive: true });
+    });
+
+    if (!video.paused || video.readyState >= 2) {
+      if (state.audioCtx && state.audioCtx.state === 'suspended') {
+        state.audioCtx.resume().catch(() => {});
+      }
+    }
+  } catch (error) {
+    log.error('Failed to connect video element to AudioContext', error);
+  }
+}
+
+// Alias for backwards compatibility
+export function initEqualizer(video) {
+  if (video) {
+    connectVideo(video);
+  } else {
+    ensureAudioEngine();
   }
 }
 

@@ -67,11 +67,11 @@ export function loadSettings() {
     if (state.weq8) {
       const savedOutputGain = localStorage.getItem('ytm_eq_output_gain');
       if (savedOutputGain !== null) {
-        state.weq8.outputGain = parseFloat(savedOutputGain);
+        state.weq8.outputGain = state.isEqEnabled ? parseFloat(savedOutputGain) : 1.0;
       }
       const savedSatMode = localStorage.getItem('ytm_eq_saturation_mode') || 'none';
       const savedSatThreshold = localStorage.getItem('ytm_eq_saturation_threshold') || '1.0';
-      state.weq8.setSaturationMode(savedSatMode, { threshold: parseFloat(savedSatThreshold) });
+      state.weq8.setSaturationMode(state.isEqEnabled ? savedSatMode : 'none', { threshold: parseFloat(savedSatThreshold) });
     }
 
     state.setIsApplyingPreset(true);
@@ -128,6 +128,10 @@ export function loadSettings() {
       }
     } finally {
       state.setIsApplyingPreset(false);
+    }
+
+    if (state.weq8) {
+      state.setLastKnownSpecJSON(JSON.stringify(state.weq8.spec));
     }
 
     // Sync the UI controls
