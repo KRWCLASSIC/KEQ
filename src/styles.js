@@ -494,4 +494,52 @@ export const PANEL_STYLES = `
     background: #181818;
     color: #eee;
   }
+
+  /* ── YouTube Music New MiniPlayer Equalizer Button ────────────────────────── */
+  .ytMusicMiniPlayerEqButton {
+    display: flex;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  .ytMusicMiniPlayerEqButton #ytm-eq-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background-color 0.2s, color 0.2s, transform 0.1s;
+    outline: none;
+    box-sizing: border-box;
+  }
+
+  .ytMusicMiniPlayerEqButton #ytm-eq-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .ytMusicMiniPlayerEqButton #ytm-eq-btn:active {
+    transform: scale(0.96);
+  }
+
+  .ytMusicMiniPlayerEqButton #ytm-eq-btn.active,
+  #ytm-eq-btn.active,
+  #ytm-expand-eq-btn.active {
+    background: rgba(255, 255, 255, 0.25) !important;
+  }
+
+  @media (max-width: 700px) {
+    #ytm-eq-panel {
+      width: calc(100vw - 32px);
+      right: 16px;
+    }
+  }
 `;

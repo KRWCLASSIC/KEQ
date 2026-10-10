@@ -44,6 +44,174 @@ export function updateUIControls() {
   });
 }
 
+// Helper to create the standard Equalizer SVG icon
+export function createEqSvg(width = 24, height = 24) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', typeof width === 'number' ? width.toString() : width);
+  svg.setAttribute('height', typeof height === 'number' ? height.toString() : height);
+  svg.style.width = typeof width === 'number' ? `${width}px` : width;
+  svg.style.height = typeof height === 'number' ? `${height}px` : height;
+  svg.style.display = 'block';
+  svg.style.pointerEvents = 'none';
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+
+  const lines = [
+    { x1: 4, y1: 21, x2: 4, y2: 14 },
+    { x1: 4, y1: 10, x2: 4, y2: 3 },
+    { x1: 12, y1: 21, x2: 12, y2: 12 },
+    { x1: 12, y1: 8, x2: 12, y2: 3 },
+    { x1: 20, y1: 21, x2: 20, y2: 16 },
+    { x1: 20, y1: 12, x2: 20, y2: 3 }
+  ];
+  lines.forEach(l => {
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', l.x1);
+    line.setAttribute('y1', l.y1);
+    line.setAttribute('x2', l.x2);
+    line.setAttribute('y2', l.y2);
+    svg.appendChild(line);
+  });
+  const circles = [
+    { cx: 4, cy: 12, r: 2 },
+    { cx: 12, cy: 10, r: 2 },
+    { cx: 20, cy: 14, r: 2 }
+  ];
+  circles.forEach(c => {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', c.cx);
+    circle.setAttribute('cy', c.cy);
+    circle.setAttribute('r', c.r);
+    circle.setAttribute('fill', 'currentColor');
+    svg.appendChild(circle);
+  });
+  return svg;
+}
+
+// Create Button for YouTube Music New MiniPlayer UI
+export function createNewUiButton(togglePanel) {
+  const container = document.createElement('div');
+  container.className = 'ytMusicMiniPlayerEqButton';
+
+  const button = document.createElement('button');
+  button.id = 'ytm-eq-btn';
+  button.className = 'ytSpecButtonShapeNextHost ytSpecButtonShapeNextTonal ytSpecButtonShapeNextOverlay ytSpecButtonShapeNextSizeS ytSpecButtonShapeNextIconButton ytSpecButtonShapeNextEnableBackdropFilterExperiment ytSpecButtonShapeNextMainstageIconSize ytSpecButtonShapeNextMainstagePadding';
+  button.title = 'Equalizer';
+  button.setAttribute('aria-label', 'Equalizer');
+  button.setAttribute('aria-haspopup', 'true');
+
+  const iconDiv = document.createElement('div');
+  iconDiv.setAttribute('aria-hidden', 'true');
+  iconDiv.className = 'ytSpecButtonShapeNextIcon';
+
+  const iconWrapper = document.createElement('span');
+  iconWrapper.className = 'ytIconWrapperHost';
+  iconWrapper.style.width = '18px';
+  iconWrapper.style.height = '18px';
+
+  const iconShape = document.createElement('span');
+  iconShape.className = 'yt-icon-shape ytSpecIconShapeHost';
+
+  const innerDiv = document.createElement('div');
+  innerDiv.style.width = '100%';
+  innerDiv.style.height = '100%';
+  innerDiv.style.display = 'block';
+  innerDiv.style.fill = 'currentColor';
+
+  const svg = createEqSvg('100%', '100%');
+  innerDiv.appendChild(svg);
+  iconShape.appendChild(innerDiv);
+  iconWrapper.appendChild(iconShape);
+  iconDiv.appendChild(iconWrapper);
+  button.appendChild(iconDiv);
+
+  const touchFeedback = document.createElement('yt-touch-feedback-shape');
+  touchFeedback.setAttribute('aria-hidden', 'true');
+  touchFeedback.className = 'ytSpecTouchFeedbackShapeHost ytSpecTouchFeedbackShapeOverlayTouchResponse';
+  const stroke = document.createElement('div');
+  stroke.className = 'ytSpecTouchFeedbackShapeStroke';
+  const fill = document.createElement('div');
+  fill.className = 'ytSpecTouchFeedbackShapeFill';
+  touchFeedback.appendChild(stroke);
+  touchFeedback.appendChild(fill);
+  button.appendChild(touchFeedback);
+
+  if (typeof togglePanel === 'function') {
+    button.addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePanel();
+    });
+  }
+
+  container.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  container.appendChild(button);
+  return container;
+}
+
+// Create Legacy YouTube Music Toolbar Button
+export function createLegacyYtmButton(togglePanel) {
+  const eqButton = document.createElement('yt-icon-button');
+  eqButton.id = 'ytm-eq-btn';
+  eqButton.title = 'Equalizer';
+  eqButton.className = 'shuffle style-scope ytmusic-player-bar';
+  eqButton.setAttribute('aria-haspopup', 'true');
+
+  const svg = createEqSvg(24, 24);
+  const wrapper = document.createElement('div');
+  wrapper.style.width = '100%';
+  wrapper.style.height = '100%';
+  wrapper.style.display = 'flex';
+  wrapper.style.alignItems = 'center';
+  wrapper.style.justifyContent = 'center';
+  wrapper.appendChild(svg);
+  eqButton.appendChild(wrapper);
+
+  if (typeof togglePanel === 'function') {
+    eqButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePanel();
+    });
+  }
+
+  return eqButton;
+}
+
+// Create Legacy YouTube Music Expanding Menu Button
+export function createLegacyExpandButton(togglePanel) {
+  const expandEqButton = document.createElement('yt-icon-button');
+  expandEqButton.id = 'ytm-expand-eq-btn';
+  expandEqButton.title = 'Equalizer';
+  expandEqButton.className = 'expand-shuffle style-scope ytmusic-player-bar';
+  expandEqButton.setAttribute('aria-haspopup', 'true');
+  expandEqButton.setAttribute('slot', 'elements');
+
+  const svg = createEqSvg(24, 24);
+  const wrapper = document.createElement('div');
+  wrapper.style.width = '100%';
+  wrapper.style.height = '100%';
+  wrapper.style.display = 'flex';
+  wrapper.style.alignItems = 'center';
+  wrapper.style.justifyContent = 'center';
+  wrapper.appendChild(svg);
+  expandEqButton.appendChild(wrapper);
+
+  if (typeof togglePanel === 'function') {
+    expandEqButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePanel();
+    });
+  }
+
+  return expandEqButton;
+}
+
 // Inject HTML UI into the DOM
 export function injectUI() {
   if (document.getElementById('ytm-eq-panel')) return;
@@ -627,90 +795,25 @@ export function injectUI() {
   panel.appendChild(body);
   document.body.appendChild(panel);
 
-  // Create Toolbar Button programmatically
-  const eqButton = document.createElement('yt-icon-button');
-  eqButton.id = 'ytm-eq-btn';
-  eqButton.title = 'Equalizer';
-  // Use the 'shuffle' class to piggyback on YouTube Music's CSS that auto-hides it when the screen is too narrow
-  eqButton.className = 'shuffle style-scope ytmusic-player-bar';
-  eqButton.setAttribute('aria-haspopup', 'true');
-
-  // Create SVG programmatically
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('width', '24');
-  svg.setAttribute('height', '24');
-  svg.style.width = '24px';
-  svg.style.height = '24px';
-  svg.style.display = 'block';
-  svg.style.pointerEvents = 'none';
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '2');
-  svg.setAttribute('stroke-linecap', 'round');
-  svg.setAttribute('stroke-linejoin', 'round');
-
-  const lines = [
-    { x1: 4, y1: 21, x2: 4, y2: 14 },
-    { x1: 4, y1: 10, x2: 4, y2: 3 },
-    { x1: 12, y1: 21, x2: 12, y2: 12 },
-    { x1: 12, y1: 8, x2: 12, y2: 3 },
-    { x1: 20, y1: 21, x2: 20, y2: 16 },
-    { x1: 20, y1: 12, x2: 20, y2: 3 }
-  ];
-  lines.forEach(l => {
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', l.x1);
-    line.setAttribute('y1', l.y1);
-    line.setAttribute('x2', l.x2);
-    line.setAttribute('y2', l.y2);
-    svg.appendChild(line);
-  });
-  const circles = [
-    { cx: 4, cy: 12, r: 2 },
-    { cx: 12, cy: 10, r: 2 },
-    { cx: 20, cy: 14, r: 2 }
-  ];
-  circles.forEach(c => {
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', c.cx);
-    circle.setAttribute('cy', c.cy);
-    circle.setAttribute('r', c.r);
-    circle.setAttribute('fill', 'currentColor');
-    svg.appendChild(circle);
-  });
-
-  // Wrap SVG in a flex container that fills the button to guarantee perfect centering
-  const wrapper = document.createElement('div');
-  wrapper.style.width = '100%';
-  wrapper.style.height = '100%';
-  wrapper.style.display = 'flex';
-  wrapper.style.alignItems = 'center';
-  wrapper.style.justifyContent = 'center';
-  wrapper.appendChild(svg);
-
-  eqButton.appendChild(wrapper);
-
-  // Create a clone for the Expanding Menu (drawer) for narrow screens
-  const expandEqButton = document.createElement('yt-icon-button');
-  expandEqButton.id = 'ytm-expand-eq-btn';
-  expandEqButton.title = 'Equalizer';
-  expandEqButton.className = 'expand-shuffle style-scope ytmusic-player-bar';
-  expandEqButton.setAttribute('aria-haspopup', 'true');
-  expandEqButton.setAttribute('slot', 'elements');
-  expandEqButton.appendChild(wrapper.cloneNode(true));
-
   // Set up Event Listeners
   const togglePanel = () => {
     const isShowing = panel.classList.contains('show');
     if (isShowing) {
       panel.classList.remove('show');
-      eqButton.classList.remove('active');
-      expandEqButton.classList.remove('active');
+      document.querySelectorAll('#ytm-eq-btn, #ytm-expand-eq-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
     } else {
+      if (location.hostname === 'music.youtube.com') {
+        panel.style.position = '';
+        panel.style.top = '';
+        panel.style.bottom = '';
+        panel.style.right = '';
+      }
       panel.classList.add('show');
-      eqButton.classList.add('active');
-      expandEqButton.classList.add('active');
+      document.querySelectorAll('#ytm-eq-btn, #ytm-expand-eq-btn').forEach(btn => {
+        btn.classList.add('active');
+      });
 
       // Ensure the AudioContext and EQ are connected when opening the panel
       detectAndConnectVideos();
@@ -740,13 +843,11 @@ export function injectUI() {
     }
   };
 
-  eqButton.addEventListener('click', togglePanel);
-  expandEqButton.addEventListener('click', togglePanel);
-
   closeBtn.addEventListener('click', () => {
     panel.classList.remove('show');
-    eqButton.classList.remove('active');
-    expandEqButton.classList.remove('active');
+    document.querySelectorAll('#ytm-eq-btn, #ytm-expand-eq-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
   });
 
   input.addEventListener('change', (e) => {
@@ -757,47 +858,113 @@ export function injectUI() {
     resetToFlat();
   });
 
-  // Attempt to inject the button in the bottom right player bar controls
-  injectButtonLoop(eqButton, expandEqButton);
+  // Attempt to inject the button in the player bar controls (new miniplayer or legacy)
+  const legacyEqButton = createLegacyYtmButton(togglePanel);
+  const legacyExpandButton = createLegacyExpandButton(togglePanel);
+  injectButtonLoop(togglePanel, legacyEqButton, legacyExpandButton);
 
   // Synchronize controls with loaded state
   updateUIControls();
 }
 
-// Look for right-controls-buttons and inject our button there
-export function injectButtonLoop(button, expandButton) {
+let ytmInjectFn = null;
+
+// Look for right controls (new miniplayer or legacy right-controls-buttons) and inject our button there
+export function injectButtonLoop(togglePanelOrBtn, legacyButton, legacyExpandButton) {
+  const isYTM = location.hostname === 'music.youtube.com';
+  if (!isYTM) return;
+
+  let togglePanel = null;
+  let oldEqBtn = null;
+  let oldExpandBtn = null;
+
+  if (typeof togglePanelOrBtn === 'function') {
+    togglePanel = togglePanelOrBtn;
+    oldEqBtn = legacyButton;
+    oldExpandBtn = legacyExpandButton;
+  } else if (togglePanelOrBtn instanceof HTMLElement) {
+    oldEqBtn = togglePanelOrBtn;
+    oldExpandBtn = legacyButton;
+  }
+
   const insertBtn = () => {
-    // Query selectors for YouTube Music's player bar controls
+    // If button already exists and is attached to DOM, nothing to do
+    const currentBtn = document.getElementById('ytm-eq-btn');
+    if (currentBtn && document.body.contains(currentBtn)) {
+      return true;
+    }
+
+    // 1. Try New YouTube Music MiniPlayer UI
+    const volumeWrapper = document.querySelector('.ytMusicMiniPlayerVolumeWrapper');
+    const rightSection = document.querySelector('.ytMusicMiniPlayerRightSection');
+
+    if (volumeWrapper || rightSection) {
+      // Remove any previously orphaned eq container
+      document.querySelectorAll('.ytMusicMiniPlayerEqButton').forEach(el => el.remove());
+
+      const newBtnContainer = createNewUiButton(togglePanel);
+
+      if (volumeWrapper) {
+        // Place directly to the right of .ytMusicMiniPlayerVolumeWrapper
+        volumeWrapper.insertAdjacentElement('afterend', newBtnContainer);
+      } else if (rightSection) {
+        const menuBtn = rightSection.querySelector('.ytMusicMiniPlayerMenuButton');
+        if (menuBtn) {
+          rightSection.insertBefore(newBtnContainer, menuBtn);
+        } else {
+          rightSection.appendChild(newBtnContainer);
+        }
+      }
+
+      log.info('Equalizer button successfully injected into New YouTube Music MiniPlayer.');
+      detectAndConnectVideos();
+      updateUIControls();
+
+      const panel = document.getElementById('ytm-eq-panel');
+      if (panel && panel.classList.contains('show')) {
+        document.querySelectorAll('#ytm-eq-btn, #ytm-expand-eq-btn').forEach(b => b.classList.add('active'));
+      }
+      return true;
+    }
+
+    // 2. Try Legacy YouTube Music UI (ytmusic-player-bar)
     const rightControls = document.querySelector('ytmusic-player-bar .right-controls-buttons');
     const expandingMenu = document.getElementById('expanding-menu');
-    let injected = false;
+    let injectedOld = false;
 
     if (rightControls && !document.getElementById('ytm-eq-btn')) {
-      // Insert just before the expand controls so it groups with the repeat/shuffle buttons
+      const btn = oldEqBtn || createLegacyYtmButton(togglePanel);
       const expandBtn = rightControls.querySelector('.expand-button');
       if (expandBtn) {
-        rightControls.insertBefore(button, expandBtn);
+        rightControls.insertBefore(btn, expandBtn);
       } else {
-        rightControls.appendChild(button);
+        rightControls.appendChild(btn);
       }
-      injected = true;
+      injectedOld = true;
     }
 
     if (expandingMenu && !document.getElementById('ytm-expand-eq-btn')) {
-      expandingMenu.appendChild(expandButton);
-      injected = true;
+      const expBtn = oldExpandBtn || createLegacyExpandButton(togglePanel);
+      expandingMenu.appendChild(expBtn);
+      injectedOld = true;
     }
 
-    if (injected) {
-      log.info('Equalizer buttons successfully injected into Player Bar.');
-
-      // Once injected, look for active video elements immediately to initialize backend hooks silently
+    if (injectedOld) {
+      log.info('Equalizer buttons successfully injected into Legacy Player Bar.');
       detectAndConnectVideos();
       updateUIControls();
+
+      const panel = document.getElementById('ytm-eq-panel');
+      if (panel && panel.classList.contains('show')) {
+        document.querySelectorAll('#ytm-eq-btn, #ytm-expand-eq-btn').forEach(b => b.classList.add('active'));
+      }
       return true;
     }
+
     return false;
   };
+
+  ytmInjectFn = insertBtn;
 
   if (!insertBtn()) {
     const interval = setInterval(() => {
@@ -847,8 +1014,13 @@ export function detectAndConnectVideos() {
 export function setupDOMWatcher() {
   detectAndConnectVideos();
 
+  const isYTM = location.hostname === 'music.youtube.com';
+
   const observer = new MutationObserver(() => {
     detectAndConnectVideos();
+    if (isYTM && ytmInjectFn && !document.getElementById('ytm-eq-btn')) {
+      ytmInjectFn();
+    }
   });
 
   observer.observe(document.body || document.documentElement, {
@@ -867,16 +1039,18 @@ export function setupDOMWatcher() {
   ];
 
   spaEvents.forEach(evtName => {
-    window.addEventListener(evtName, () => {
+    const handleSpa = () => {
       setTimeout(detectAndConnectVideos, 50);
       setTimeout(detectAndConnectVideos, 300);
       setTimeout(detectAndConnectVideos, 1000);
-    }, { passive: true });
-    document.addEventListener(evtName, () => {
-      setTimeout(detectAndConnectVideos, 50);
-      setTimeout(detectAndConnectVideos, 300);
-      setTimeout(detectAndConnectVideos, 1000);
-    }, { passive: true });
+      if (isYTM && ytmInjectFn) {
+        setTimeout(ytmInjectFn, 50);
+        setTimeout(ytmInjectFn, 300);
+        setTimeout(ytmInjectFn, 1000);
+      }
+    };
+    window.addEventListener(evtName, handleSpa, { passive: true });
+    document.addEventListener(evtName, handleSpa, { passive: true });
   });
 }
 
@@ -897,43 +1071,8 @@ export function injectYouTubeButton() {
   ytBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;';
 
   // Same EQ SVG icon used in the YTM toolbar
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('width', '24');
-  svg.setAttribute('height', '24');
+  const svg = createEqSvg(24, 24);
   svg.style.cssText = 'width:24px;height:24px;flex-shrink:0;display:block;pointer-events:none;';
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '2');
-  svg.setAttribute('stroke-linecap', 'round');
-  svg.setAttribute('stroke-linejoin', 'round');
-
-  [
-    { x1: 4, y1: 21, x2: 4, y2: 14 },
-    { x1: 4, y1: 10, x2: 4, y2: 3 },
-    { x1: 12, y1: 21, x2: 12, y2: 12 },
-    { x1: 12, y1: 8, x2: 12, y2: 3 },
-    { x1: 20, y1: 21, x2: 20, y2: 16 },
-    { x1: 20, y1: 12, x2: 20, y2: 3 }
-  ].forEach(l => {
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', l.x1); line.setAttribute('y1', l.y1);
-    line.setAttribute('x2', l.x2); line.setAttribute('y2', l.y2);
-    svg.appendChild(line);
-  });
-
-  [
-    { cx: 4, cy: 12, r: 2 },
-    { cx: 12, cy: 10, r: 2 },
-    { cx: 20, cy: 14, r: 2 }
-  ].forEach(c => {
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', c.cx); circle.setAttribute('cy', c.cy);
-    circle.setAttribute('r', c.r);
-    circle.setAttribute('fill', 'currentColor');
-    svg.appendChild(circle);
-  });
-
   ytBtn.appendChild(svg);
 
   // Toggle the shared EQ panel on click, positioned dynamically above the player's right edge
